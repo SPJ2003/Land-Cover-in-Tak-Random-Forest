@@ -4,5 +4,5 @@
 - Training samples: ESA WorldCover (2 classes: Forest/Agriculture)
 - Model: Random Forest (~200 trees), trained/evaluated in GEE
 - Metrics: OA ≈ 94.7%, Kappa ≈ 0.89, UA/PA per class
-
+https://spj2003.github.io/Land-Cover-in-Tak-Random-Forest/
 © 2025-10-26 • Supannika Jitjak

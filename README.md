@@ -1,0 +1,1 @@
+# Land-Cover-in-Tak-Random-Forest

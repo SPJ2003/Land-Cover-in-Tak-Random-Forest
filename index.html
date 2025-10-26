@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🌲🌾 Tak Land Cover — Random Forest (Lab 6)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#0b1220; --bg2:#0e172a; --text:#0f172a; --muted:#475569;
+      --brand:#7c3aed; --cyan:#06b6d4; --green:#22c55e; --amber:#f59e0b;
+      --card:#ffffff; --border:#e5e7eb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0b1220; --bg2:#0e172a; --text:#eaf2ff; --muted:#cbd5e1; --card:rgba(255,255,255,.06); --border:rgba(255,255,255,.16); }
+      body { background:
+        radial-gradient(1200px 700px at 10% -10%, rgba(124,58,237,.18), transparent),
+        radial-gradient(900px 600px at 90% 0%, rgba(6,182,212,.16), transparent),
+        linear-gradient(180deg, var(--bg), var(--bg2)); }
+      header.hero { background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03)); }
+      .card { background: var(--card); }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:'Sarabun', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Sans Thai', sans-serif; color:var(--text); line-height:1.85; background:#f8fafc; }
+    .container { max-width:1100px; margin:0 auto; padding:28px 18px 56px; }
+    header.hero { border:1px solid var(--border); border-radius:24px; padding:26px 24px; background:#fff; position:relative; overflow:hidden; }
+    header.hero:before { content:""; position:absolute; inset:-2px; background: conic-gradient(from 180deg at 70% -10%, rgba(124,58,237,.20), rgba(6,182,212,.20), rgba(34,197,94,.20), rgba(124,58,237,.20)); filter: blur(54px); opacity:.2; }
+    h1,h2,h3 { font-family:'Kanit','Sarabun',sans-serif; letter-spacing:.2px; }
+    h1.title { font-size:clamp(1.6rem,3.6vw,2.6rem); margin:6px 0 8px; }
+    h2.section { font-size:clamp(1.1rem,1.6vw,1.3rem); margin:.2rem 0 .8rem; }
+    .subtitle { margin:0; color:var(--muted); }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .chip { padding:.42rem .8rem; border-radius:999px; font-weight:600; border:1px solid var(--border); background:#fff; color:#111827; }
+    .btns { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+    a.btn { text-decoration:none; color:white; padding:.65rem 1rem; border-radius:14px; border:1px solid var(--border); background:linear-gradient(180deg, #7c3aed, #6d28d9); font-weight:700; }
+    a.btn.secondary { background:linear-gradient(180deg, #0ea5e9, #0284c7); }
+    .grid { display:grid; gap:18px; grid-template-columns: 1.15fr .85fr; }
+    @media (max-width:1100px) { .grid { grid-template-columns:1fr; } }
+    .card { border:1px solid var(--border); border-radius:22px; padding:18px 20px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.06); }
+    .figure img { width:100%; border-radius:16px; border:1px solid var(--border); }
+    .legend { display:flex; gap:10px; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+    .pill { display:inline-flex; align-items:center; gap:.5rem; padding:.42rem .8rem; border-radius:999px; font-weight:700; border:1px solid var(--border); background:#fff; }
+    .colorbox { width:12px; height:12px; border-radius:3px; border:1px solid #cbd5e1; }
+    .forest { background:#10b981; } .agri { background:#f59e0b; }
+    .caption { color:#64748b; font-size:.95rem; margin-top:.55rem; text-align:center; }
+    .gallery { display:grid; gap:16px; grid-template-columns:repeat(3,1fr); }
+    @media (max-width:1000px) { .gallery { grid-template-columns:1fr; } }
+    .thumb { border:1px solid var(--border); border-radius:18px; background:#fff; padding:12px; transition:transform .15s ease; cursor: zoom-in; box-shadow:0 6px 16px rgba(15,23,42,.05); }
+    .thumb:hover { transform:translateY(-2px); }
+    .thumb img { width:100%; border-radius:12px; border:1px solid var(--border); }
+    .footer { color:#64748b; text-align:center; margin-top:22px; }
+    /* Lightbox */
+    .lightbox { position:fixed; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:9999; }
+    .lightbox img { max-width:min(96vw,1200px); max-height:92vh; border-radius:16px; border:1px solid rgba(255,255,255,.25); }
+    .lightbox.show { display:flex; }
+    .lb-close { position:absolute; top:18px; right:18px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.35); color:#fff; border-radius:12px; padding:.45rem .7rem; cursor:pointer; font-family:'Kanit',sans-serif; }
+    /* Print */
+    @media print { body { background:#fff; color:#000; } .btns { display:none; } .card, header.hero { box-shadow:none; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div style="display:flex; align-items:center; gap:12px; position:relative; z-index:1;">
+        <div>
+          <h1 class="title">Land Cover in Tak — <span style="color:#7c3aed">Random Forest</span></h1>
+          <p class="subtitle">การจำแนกพื้นที่ปกคลุมดิน (ป่าไม้/เกษตรกรรม) จังหวัดตาก ด้วยอัลกอริทึม <strong>Random Forest</strong></p>
+          <div class="chips">
+            <div class="chip">👩🏻‍🎓 Supannika Jitjak • 6506614251</div>
+            <div class="chip">📅 2025-10-26</div>
+            <div class="chip">🛰️ Sentinel‑2 SR</div>
+            <div class="chip">🧠 Supervised ML</div>
+          </div>
+          <div class="btns">
+            <a class='btn secondary' href='Lab6_Geospatial_Supervised_Learning_6506614251.pdf'>📄 ดาวน์โหลด PDF</a>
+            <a class="btn" href="#" onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid" style="margin-top:20px;">
+      <article class="card">
+        <h2 class="section">❓ ปัญหาการวิจัย (Problem)</h2>
+        <p>จังหวัดตากมีพื้นที่ป่าไม้และเกษตรกรรมปะปนสูง จำเป็นต้องจำแนกพื้นที่ปกคลุมดินอย่างแม่นยำเพื่อการวางแผนการใช้ที่ดินและการอนุรักษ์ทรัพยากรธรรมชาติที่ยั่งยืน</p>
+
+        <h2 class="section">🗂️ ข้อมูลที่ใช้ (Dataset & Variables)</h2>
+        <ul>
+          <li>🛰️ <strong>Sentinel‑2 SR</strong> + แบนด์ B2, B3, B4, B8</li>
+          <li>🌿 ดัชนี <code>NDVI</code> และ 💧<code>NDWI</code></li>
+          <li>📌 ตัวอย่างสอนจาก <em>ESA WorldCover</em> → 2 คลาส: <strong>1=Forest</strong>, <strong>2=Agriculture</strong></li>
+          <li>🗺️ AOI: ขอบเขตจังหวัดตาก</li>
+        </ul>
+
+        <h2 class="section">⚙️ เวิร์กโฟลว์ Supervised Learning</h2>
+        <ol>
+          <li>เตรียมคอมโพสิต Sentinel‑2 และคำนวณ NDVI/NDWI</li>
+          <li>สุ่มตัวอย่างจาก WorldCover และแบ่ง train:test ≈ 70:30</li>
+          <li>ฝึกโมเดล <strong>Random Forest</strong> (~200 ต้น) บน GEE</li>
+          <li>ประเมินด้วย confusion matrix → OA, Kappa, Producer/User</li>
+          <li>ส่งออกผลจำแนก ทำแผนที่สรุปด้วย GeoPandas + Matplotlib</li>
+        </ol>
+      </article>
+
+      <aside class="card figure">
+        <img src="assets/tak_map.png" alt="Tak land cover classification map" onclick="openLB(this.src)">
+        <div class="legend">
+          <span class="pill"><span class="colorbox forest"></span>🌲 Forest (1)</span>
+          <span class="pill"><span class="colorbox agri"></span>🌾 Agriculture (2)</span>
+        </div>
+        <div class="caption">แผนที่ผลการจำแนกพื้นที่ปกคลุมดิน จังหวัดตาก ด้วย Random Forest</div>
+      </aside>
+    </section>
+
+    <section class="card" style="margin-top:18px;">
+      <h2 class="section">📈 Model Accuracy & Feature Analysis</h2>
+      <div class="gallery">
+        <div class="thumb" onclick="openLB(this.querySelector('img').src)">
+          <img src="assets/confusion_matrix.png" alt="Confusion Matrix">
+          <div class="caption">📊 Confusion Matrix — OA ≈ <strong>94.7%</strong>, Kappa ≈ <strong>0.89</strong></div>
+        </div>
+        <div class="thumb" onclick="openLB(this.querySelector('img').src)">
+          <img src="assets/accuracy_chart.png" alt="Per-class Accuracy">
+          <div class="caption">🎯 UA/PA — Forest: UA 93.3%, PA 95.7% • Agri: UA 96.0%, PA 94.0%</div>
+        </div>
+        <div class="thumb" onclick="openLB(this.querySelector('img').src)">
+          <img src="assets/feature_importance.png" alt="Feature Importance">
+          <div class="caption">🧠 Feature Importance — เด่น: Slope, Elevation, B12, B4, NDVI</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px;">
+      <h2 class="section">🧩 บทสรุป & ผลกระทบเชิงสังคม</h2>
+      <p>โมเดล <strong>Random Forest</strong> ให้ความแม่นยำสูงและสมดุลระหว่างคลาส เหมาะสำหรับการติดตาม LULC ระดับจังหวัด สนับสนุนการอนุรักษ์ป่า ลดการบุกรุก และวางแผนเกษตรยั่งยืน.</p>
+    </section>
+
+    <div class="footer">© 2025-10-26 • Supannika Jitjak • ทำเพื่อการศึกษา (Lab 6)</div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox" onclick="closeLB(event)">
+    <button class="lb-close" onclick="closeLB(event)">ปิด ✕</button>
+    <img id="lb-img" src="" alt="preview">
+  </div>
+
+<script>
+  function openLB(src) { const lb=document.getElementById('lightbox'); const img=document.getElementById('lb-img'); img.src=src; lb.classList.add('show'); }
+  function closeLB(e) { e.preventDefault(); if (e.target.id==='lightbox' || e.target.classList.contains('lb-close')) document.getElementById('lightbox').classList.remove('show'); }
+</script>
+</body>
+</html>
